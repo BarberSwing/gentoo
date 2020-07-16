@@ -4,6 +4,7 @@
 
 daemon_clamd="/usr/sbin/clamd"
 daemon_freshclam="/usr/bin/freshclam"
+daemon_clamonacc="/usr/bin/clamonacc"
 daemon_milter="/usr/sbin/clamav-milter"
 
 extra_commands="logfix"
@@ -65,6 +66,18 @@ start() {
 		fi
 	fi
 
+	if [ "${START_CLAMONACC}" = "yes" ]; then
+		checkpath --quiet --mode 755 \
+			--owner "${clamd_user}":"${clamd_user}" \
+			--directory `dirname ${clamd_socket}`
+		ebegin "Starting clamonacc"
+		start-stop-daemon --start --quiet \
+			--nicelevel ${CLAMONACC_NICELEVEL:-0} \
+			--ionice ${IONICE_LEVEL:-0} \
+			--exec ${daemon_clamonacc}
+		eend $? "Failed to start clamonacc"
+	fi
+
 	if [ "${START_MILTER}" = "yes" ]; then
 		if [ -z "${MILTER_CONF_FILE}" ]; then
 			MILTER_CONF_FILE="/etc/clamav-milter.conf"
@@ -89,6 +102,11 @@ stop() {
 		ebegin "Stopping freshclam"
 		start-stop-daemon --stop --quiet --name freshclam
 		eend $? "Failed to stop freshclam"
+	fi
+	if [ "${START_CLAMONACC}" = "yes" ]; then
+		ebegin "Stopping clamonacc"
+		start-stop-daemon --stop --quiet --name clamonacc
+		eend $? "Failed to stop clamonacc"
 	fi
 	if [ "${START_MILTER}" = "yes" ]; then
 		ebegin "Stopping clamav-milter"
